@@ -10,7 +10,7 @@ from schemas.task import TaskModel, ResponseTaskModel
 router = APIRouter(prefix="/tasks")
 
 
-@router.get("/all", response_model=list[TaskModel])
+@router.get("/all", response_model=list[ResponseTaskModel])
 async def all_tasks() -> list[TaskRecord]:
     objects = await Task.find_many()
     return objects
@@ -22,7 +22,7 @@ async def create_task(data: TaskModel) -> TaskRecord:
     return obj
 
 
-@router.get("/{pk}")
+@router.get("/{pk}", response_model=ResponseTaskModel)
 async def get_task_by_id(pk: int) -> TaskRecord:
     try:
         obj = await Task.find_first_or_raise(where={"id": pk})
