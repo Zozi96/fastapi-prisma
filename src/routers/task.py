@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from prisma import errors
 from prisma.models import Task as TaskRecord
 
-from controllers import Task
+from actions import Task
 from schemas.task import TaskModel, ResponseTaskModel
 
 router = APIRouter(prefix="/tasks")

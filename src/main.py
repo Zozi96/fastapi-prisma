@@ -5,7 +5,7 @@ import uvicorn
 
 from fastapi import FastAPI
 
-from controllers import prisma
+from actions import prisma
 from settings import FAST_API_CONFIGS, ASGI_CONFIGS
 from routers import api
 
