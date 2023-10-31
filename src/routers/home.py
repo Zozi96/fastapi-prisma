@@ -5,4 +5,4 @@ router = APIRouter()
 
 @router.get("/index")
 async def main():
-    return {"message": "This is the main content"}
+    return {"message": "Hello world"}

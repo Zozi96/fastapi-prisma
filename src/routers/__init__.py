@@ -1,13 +1,8 @@
-import typing
-
 from fastapi import APIRouter
 
-from routers import home
+from routers import home, task
 
 
-class Router(typing.TypedDict):
-    router: APIRouter
-    prefix: str
-
-
-url_path_list: list[Router] = [Router(router=home.router, prefix="")]
+api = APIRouter(prefix="/api")
+api.include_router(home.router)
+api.include_router(task.router)
