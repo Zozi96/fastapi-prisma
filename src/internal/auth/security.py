@@ -4,19 +4,19 @@ from datetime import datetime
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from pydantic import BaseModel
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from prisma.models import User as UserRecord
-from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 
+from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 from internal.db import User
+from internal.auth.schemas import TokenData, UserResponse
 
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 OAUTH2_SCHEME: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(
-    tokenUrl="/api/users/login"
+    tokenUrl="/auth/token"
 )
 
 CredentialsException: Final[HTTPException] = HTTPException(
@@ -24,15 +24,6 @@ CredentialsException: Final[HTTPException] = HTTPException(
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-
-class TokenData(BaseModel):
-    email: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
 
 async def generate_password_hash(password: str) -> str:
@@ -122,3 +113,12 @@ async def get_current_user(token: Annotated[str, Depends(OAUTH2_SCHEME)]) -> Use
     if not user:
         raise CredentialsException
     return user
+
+
+def user_logged() -> type[UserResponse]:
+    """
+    Returns the type of the current user that is logged in.
+
+    :return: The type of the current user that is logged in.
+    """
+    return Annotated[UserResponse, Depends(get_current_user)]

@@ -1,4 +1,3 @@
-from email.policy import default
 from typing import Final, Any
 
 from decouple import config as env

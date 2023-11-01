@@ -1,7 +1,5 @@
 import pydantic as pd
 
-from internal.db import User
-
 
 class UserBase(pd.BaseModel):
     email: pd.EmailStr
@@ -13,3 +11,12 @@ class UserForm(UserBase):
 
 class UserResponse(UserBase):
     id: int
+
+
+class TokenData(pd.BaseModel):
+    email: str
+
+
+class Token(pd.BaseModel):
+    access_token: str
+    token_type: str
