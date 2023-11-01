@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Self
 import pydantic as pd
 
 
@@ -10,6 +11,22 @@ class UserBase(pd.BaseModel):
 
 class UserForm(UserBase):
     password: str = pd.Field(min_length=8, max_length=32, examples=["mysecretpassword"])
+
+
+class UserChangePassword(pd.BaseModel):
+    old_password: str = pd.Field(
+        min_length=6, max_length=32, examples=["mysecretoldpassword"]
+    )
+    new_password: str = pd.Field(
+        min_length=6, max_length=32, examples=["mysecretnewpassword"]
+    )
+
+    @pd.model_validator(mode="after")
+    def check_passwords_match(cls, obj: Self) -> Self:
+        old_password, new_password = obj.old_password, obj.new_password
+        if old_password == new_password:
+            raise pd.ValidationError("New password must be different from old password")
+        return obj
 
 
 class UserResponse(UserBase):
