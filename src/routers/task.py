@@ -1,16 +1,14 @@
-from http import HTTPStatus
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from prisma import errors
 from prisma.models import Task as TaskRecord
 
-from controllers import Task
+from internal.db import Task
 from schemas.task import TaskModel, ResponseTaskModel
 
 router = APIRouter(prefix="/tasks")
 
 
-@router.get("/all", response_model=list[TaskModel])
+@router.get("/all", response_model=list[ResponseTaskModel])
 async def all_tasks() -> list[TaskRecord]:
     objects = await Task.find_many()
     return objects
@@ -22,18 +20,18 @@ async def create_task(data: TaskModel) -> TaskRecord:
     return obj
 
 
-@router.get("/{pk}")
+@router.get("/{pk}", response_model=ResponseTaskModel)
 async def get_task_by_id(pk: int) -> TaskRecord:
     try:
         obj = await Task.find_first_or_raise(where={"id": pk})
         return obj
     except errors.RecordNotFoundError:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Item not found")
+        raise HTTPException(status_code=status.NOT_FOUND, detail="Item not found")
 
 
 @router.put("/edit/{pk}", response_model=ResponseTaskModel)
 async def edit_task(pk: int, data: TaskModel) -> TaskRecord:
     obj = await Task.update(where={"id": pk}, data=data.model_dump())
     if not obj:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Item not found")
+        raise HTTPException(status_code=status.NOT_FOUND, detail="Item not found")
     return obj
