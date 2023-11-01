@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
-from routers import home, task
+from routers import home, task, users
 
 
 api = APIRouter(prefix="/api")
 api.include_router(home.router)
 api.include_router(task.router)
+api.include_router(users.router)
