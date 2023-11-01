@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 from prisma import errors
 from prisma.models import Task as TaskRecord
-from internal.auth.security import user_logged
 
 from internal.db import Task
+from internal.auth.security import user_logged
 from schemas.task import TaskModel, ResponseTaskModel
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
