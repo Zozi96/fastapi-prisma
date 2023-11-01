@@ -11,7 +11,7 @@ from internal.auth.security import (
 
 from internal.auth.schemas import UserForm, UserResponse, Token
 
-api = APIRouter(prefix="/auth")
+api = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @api.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
