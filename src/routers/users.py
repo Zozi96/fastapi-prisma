@@ -1,5 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from prisma.models import User as UserRecord
 from internal.db import User
 from internal.security import (
@@ -30,8 +31,8 @@ async def register(data: UserForm) -> UserRecord:
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: Annotated[UserForm, Depends()]) -> dict[str, str]:
-    access_token = await login_for_access_token(form_data.email, form_data.password)
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> dict[str, str]:
+    access_token = await login_for_access_token(form_data.username, form_data.password)
     return access_token
 
 

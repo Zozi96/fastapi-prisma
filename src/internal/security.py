@@ -15,13 +15,7 @@ from internal.db import User
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-class OAuth2PasswordBearerEmail(OAuth2PasswordBearer):
-    def __init__(self, tokenUrl: str) -> None:
-        super().__init__(tokenUrl=tokenUrl)
-        self.model.name = "email"
-
-
-OAUTH2_SCHEME: Final[OAuth2PasswordBearerEmail] = OAuth2PasswordBearerEmail(
+OAUTH2_SCHEME: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(
     tokenUrl="/api/users/login"
 )
 
