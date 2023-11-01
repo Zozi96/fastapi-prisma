@@ -9,7 +9,7 @@ ALGORITHM: Final[str] = env("ALGORITHM")
 DEBUG: Final[bool] = env("DEBUG", cast=bool, default=False)
 
 FAST_API_CONFIGS: Final[dict[str, Any]] = {
-    "title": "Task",
+    "title": "Task application with FastAPI and Prisma",
     "description": "This is a project with the purpose of make this app with FastAPI and Prisma",
     "debug": DEBUG,
 }

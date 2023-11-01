@@ -37,6 +37,18 @@ async def generate_password_hash(password: str) -> str:
     """
     return PWD.hash(secret=password)
 
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify if a plain password matches a hashed password.
+
+    Args:
+        plain_password (str): The plain password to verify.
+        hashed_password (str): The hashed password to compare against.
+    Returns:
+        bool: True if the plain password matches the hashed password, False otherwise.
+    """
+    return PWD.verify(plain_password, hashed_password)
+
 
 async def authenticate_user(email: str, password: str) -> UserRecord | bool:
     """
@@ -49,7 +61,7 @@ async def authenticate_user(email: str, password: str) -> UserRecord | bool:
         Union[UserRecord, bool]: The authenticated user record if the email and password match, False otherwise.
     """
     user: UserRecord | None = await User.find_first(where={"email": email})
-    if not user or not PWD.verify(password, user.password):
+    if not user or not await verify_password(password, user.password):
         return False
     return user
 
