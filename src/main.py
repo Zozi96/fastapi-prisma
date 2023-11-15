@@ -5,9 +5,10 @@ from typing import AsyncGenerator
 import uvicorn
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from internal.db import prisma
-from internal.settings import FAST_API_CONFIGS, ASGI_CONFIGS
+from internal.settings import FAST_API_CONFIGS, ASGI_CONFIGS, CORS_CONFIG
 from internal.auth.router import api as api_auth
 from routers import api
 
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
         FastAPI: The newly created FastAPI instance.
     """
     app = FastAPI(**FAST_API_CONFIGS, lifespan=app_lifespan)
+    app.add_middleware(CORSMiddleware, **CORS_CONFIG)
     app.include_router(api_auth)
     app.include_router(api)
     return app
