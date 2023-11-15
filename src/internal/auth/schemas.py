@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Self
 import pydantic as pd
+from internal import BaseSchema
 
 
-class UserBase(pd.BaseModel):
+class UserBase(BaseSchema):
     email: pd.EmailStr = pd.Field(examples=["john.doe@mail.com"])
     first_name: str | None = pd.Field(default="", max_length=100, examples=["John"])
     last_name: str | None = pd.Field(default="", max_length=100, examples=["Doe"])
@@ -13,7 +14,7 @@ class UserForm(UserBase):
     password: str = pd.Field(min_length=8, max_length=32, examples=["mysecretpassword"])
 
 
-class UserChangePassword(pd.BaseModel):
+class UserChangePassword(BaseSchema):
     old_password: str = pd.Field(
         min_length=6, max_length=32, examples=["mysecretoldpassword"]
     )
@@ -44,10 +45,10 @@ class UserResponse(UserBase):
         return v.strftime("%Y-%m-%d %H:%M:%S")
 
 
-class TokenData(pd.BaseModel):
+class TokenData(BaseSchema):
     email: str
 
 
-class Token(pd.BaseModel):
+class Token(BaseSchema):
     access_token: str
     token_type: str

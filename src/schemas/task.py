@@ -1,9 +1,10 @@
 from datetime import datetime
+from internal import BaseSchema
 
 import pydantic as pd
 
 
-class TaskModel(pd.BaseModel):
+class TaskModel(BaseSchema):
     title: pd.constr(min_length=1)
     description: str | None
 
