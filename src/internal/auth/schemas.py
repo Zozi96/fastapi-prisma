@@ -11,7 +11,7 @@ class UserBase(BaseSchema):
 
 
 class UserForm(UserBase):
-    password: str = pd.Field(min_length=8, max_length=32, examples=["mysecretpassword"])
+    password: str = pd.Field(min_length=6, max_length=32, examples=["mysecretpassword"])
 
 
 class UserChangePassword(BaseSchema):
