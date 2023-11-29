@@ -1,8 +1,9 @@
 from typing import Annotated, Final
 from datetime import timedelta
 from datetime import datetime
+from datetime import UTC
 
-from jose import jwt, JWTError
+from jose import jwt, JWTError, ExpiredSignatureError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -14,14 +15,19 @@ from internal.auth.schemas import TokenData, UserResponse
 
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
 OAUTH2_SCHEME: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(
     tokenUrl="/auth/token"
 )
 
-CredentialsException: Final[HTTPException] = HTTPException(
+CredentialException: Final[HTTPException] = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+TokenExpiredException: Final[HTTPException] = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Token has expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -36,6 +42,7 @@ async def generate_password_hash(password: str) -> str:
         str: The hashed password.
     """
     return PWD.hash(secret=password)
+
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -76,9 +83,7 @@ async def create_access_token(data: dict[str, str]) -> str:
         str: The newly created access token.
     """
     to_encode: dict = data.copy()
-    expire: datetime = datetime.utcnow() + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire: datetime = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -97,7 +102,7 @@ async def login_for_access_token(email: str, password: str) -> dict[str, str]:
     """
     user: UserRecord | bool = await authenticate_user(email=email, password=password)
     if not user:
-        raise CredentialsException
+        raise CredentialException
     access_token = await create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -117,13 +122,15 @@ async def get_current_user(token: Annotated[str, Depends(OAUTH2_SCHEME)]) -> Use
         payload: dict = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str | None = payload.get("sub")
         if email is None:
-            raise CredentialsException
+            raise CredentialException
         token_data = TokenData(email=email)
+    except ExpiredSignatureError:
+        raise TokenExpiredException
     except JWTError:
-        raise CredentialsException
+        raise CredentialException
     user = await User.find_first(where={"email": token_data.email})
     if not user:
-        raise CredentialsException
+        raise CredentialException
     return user
 
 
