@@ -15,8 +15,6 @@ CREATE TABLE "jwt_blacklist" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "token" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
-    "expiration_date" DATETIME NOT NULL,
-    "blacklist_date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "jwt_blacklist_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 

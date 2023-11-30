@@ -3,14 +3,15 @@ from datetime import timedelta
 from datetime import datetime
 from datetime import UTC
 
-from jose import jwt, JWTError, ExpiredSignatureError
+import jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from prisma.models import User as UserRecord
+from prisma.models import User as UserRecord, JwtBlacklist as JwtBlacklistRecord
+from prisma.types import JwtBlacklistCreateInput
 
 from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
-from internal.db import User
+from internal.db import User, JWTBlacklist
 from internal.auth.schemas import TokenData, UserResponse
 
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -124,13 +125,16 @@ async def get_current_user(token: Annotated[str, Depends(OAUTH2_SCHEME)]) -> Use
         if email is None:
             raise CredentialException
         token_data = TokenData(email=email)
-    except ExpiredSignatureError:
+    except jwt.ExpiredSignatureError:
         raise TokenExpiredException
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise CredentialException
-    user = await User.find_first(where={"email": token_data.email})
+    user: UserRecord | None = await User.find_first(where={"email": token_data.email})
     if not user:
         raise CredentialException
+    banned_token: JwtBlacklistRecord | None = await JWTBlacklist.find_first(where={"token": token, "user_id": user.id})
+    if banned_token:
+        raise TokenExpiredException
     return user
 
 
@@ -141,3 +145,15 @@ def user_logged() -> type[UserResponse]:
     :return: The type of the current user that is logged in.
     """
     return Annotated[UserResponse, Depends(get_current_user)]
+
+
+async def add_access_token_blacklist(token: str, user: UserRecord) -> None:
+    """
+    Adds a JWT token to the blacklist.
+
+    Args:
+        token (str): The JWT token to add to the blacklist.
+        user (UserRecord): The user that owns the token.
+    """
+    data: JwtBlacklistCreateInput = {"token": token, "user_id": user.id}
+    await JWTBlacklist.create(data)

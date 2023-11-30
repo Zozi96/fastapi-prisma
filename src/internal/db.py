@@ -4,3 +4,4 @@ prisma = Prisma()
 
 User = prisma.user
 Task = prisma.task
+JWTBlacklist = prisma.jwtblacklist
