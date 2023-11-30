@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 
 import uvicorn
 
-from fastapi import FastAPI
+from fastapi import FastAPI, responses
 from fastapi.middleware.cors import CORSMiddleware
 
 from internal.db import prisma
@@ -45,6 +45,11 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+
+@app.get("/")
+async def root():
+    return responses.RedirectResponse(url="/docs")
 
 
 async def main() -> None:
