@@ -10,16 +10,16 @@ generator db {
 }
 
 model User {
-  id             Int            @id @default(autoincrement())
-  email          String         @unique
-  password       String
-  first_name     String         @default("")
-  last_name      String         @default("")
-  is_active      Boolean        @default(true)
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
-  tasks          Task[]
-  jwt_blacklists JwtBlacklist[]
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  first_name    String         @default("")
+  last_name     String         @default("")
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  tasks         Task[]
+  jwt_blacklist JwtBlacklist[]
 
   @@map("users")
 }

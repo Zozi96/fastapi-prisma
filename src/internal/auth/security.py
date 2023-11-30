@@ -1,18 +1,18 @@
-from typing import Annotated, Final
-from datetime import timedelta
-from datetime import datetime
 from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
+from typing import Annotated, Final
 
 import jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from prisma.models import User as UserRecord, JwtBlacklist as JwtBlacklistRecord
+from passlib.context import CryptContext
+from prisma.models import User as UserRecord
 from prisma.types import JwtBlacklistCreateInput
 
-from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
-from internal.db import User, JWTBlacklist
 from internal.auth.schemas import TokenData, UserResponse
+from internal.db import User, JWTBlacklist
+from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -22,7 +22,7 @@ OAUTH2_SCHEME: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(
 
 CredentialException: Final[HTTPException] = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
+    detail="Credentials are not valid",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -129,11 +129,13 @@ async def get_current_user(token: Annotated[str, Depends(OAUTH2_SCHEME)]) -> Use
         raise TokenExpiredException
     except jwt.InvalidTokenError:
         raise CredentialException
-    user: UserRecord | None = await User.find_first(where={"email": token_data.email})
+    user: UserRecord | None = await User.find_first(
+        where={"email": token_data.email},
+        include={"jwt_blacklist": True}
+    )
     if not user:
         raise CredentialException
-    banned_token: JwtBlacklistRecord | None = await JWTBlacklist.find_first(where={"token": token, "user_id": user.id})
-    if banned_token:
+    elif any(filter(lambda x: x.token == token, user.jwt_blacklist)):
         raise TokenExpiredException
     return user
 
@@ -147,7 +149,7 @@ def user_logged() -> type[UserResponse]:
     return Annotated[UserResponse, Depends(get_current_user)]
 
 
-async def add_access_token_blacklist(token: str, user: UserRecord) -> None:
+async def add_access_token_blacklist(token: str, user: UserResponse) -> None:
     """
     Adds a JWT token to the blacklist.
 
@@ -155,5 +157,5 @@ async def add_access_token_blacklist(token: str, user: UserRecord) -> None:
         token (str): The JWT token to add to the blacklist.
         user (UserRecord): The user that owns the token.
     """
-    data: JwtBlacklistCreateInput = {"token": token, "user_id": user.id}
+    data: JwtBlacklistCreateInput = {"token": token, "user": {"connect": {"id": user.id}}}
     await JWTBlacklist.create(data)

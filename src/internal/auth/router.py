@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from prisma.models import User as UserRecord
 
 from internal.auth.schemas import UserChangePassword, UserForm, UserResponse, Token
@@ -53,7 +53,8 @@ async def change_password(data: UserChangePassword, current_user: user_logged())
     return {"message": "Password updated successfully"}
 
 
-# @api.post("/logout", status_code=status.HTTP_200_OK)
-# async def logout(current_user: user_logged()) -> dict[str, str]:
-#     await add_access_token_blacklist(token, current_user)
-#     return {"message": "Logout successfully"}
+@api.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(request: Request, current_user: user_logged()) -> dict[str, str]:
+    token: str = request.headers.get("Authorization").split(" ")[1]
+    await add_access_token_blacklist(token, current_user)
+    return {"message": "Logout successfully"}
