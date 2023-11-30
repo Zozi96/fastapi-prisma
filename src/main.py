@@ -37,11 +37,11 @@ def create_app() -> FastAPI:
     Returns:
         FastAPI: The newly created FastAPI instance.
     """
-    app = FastAPI(**FAST_API_CONFIGS, lifespan=app_lifespan)
-    app.add_middleware(CORSMiddleware, **CORS_CONFIG)
-    app.include_router(api_auth)
-    app.include_router(api)
-    return app
+    application = FastAPI(**FAST_API_CONFIGS, lifespan=app_lifespan)
+    application.add_middleware(CORSMiddleware, **CORS_CONFIG)
+    application.include_router(api_auth)
+    application.include_router(api)
+    return application
 
 
 app = create_app()
