@@ -1,27 +1,34 @@
-from typing import Annotated, Final
-from datetime import timedelta
+from datetime import UTC
 from datetime import datetime
+from datetime import timedelta
+from typing import Annotated, Final
 
-from jose import jwt, JWTError
-from passlib.context import CryptContext
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 from prisma.models import User as UserRecord
+from prisma.types import JwtBlacklistCreateInput
 
-from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
-from internal.db import User
 from internal.auth.schemas import TokenData, UserResponse
+from internal.db import User, JWTBlacklist
+from internal.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 
 PWD: Final[CryptContext] = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 OAUTH2_SCHEME: Final[OAuth2PasswordBearer] = OAuth2PasswordBearer(
     tokenUrl="/auth/token"
 )
 
-CredentialsException: Final[HTTPException] = HTTPException(
+CredentialException: Final[HTTPException] = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
+    detail="Credentials are not valid",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+TokenExpiredException: Final[HTTPException] = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Token has expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -36,6 +43,7 @@ async def generate_password_hash(password: str) -> str:
         str: The hashed password.
     """
     return PWD.hash(secret=password)
+
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -76,9 +84,7 @@ async def create_access_token(data: dict[str, str]) -> str:
         str: The newly created access token.
     """
     to_encode: dict = data.copy()
-    expire: datetime = datetime.utcnow() + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire: datetime = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -97,7 +103,7 @@ async def login_for_access_token(email: str, password: str) -> dict[str, str]:
     """
     user: UserRecord | bool = await authenticate_user(email=email, password=password)
     if not user:
-        raise CredentialsException
+        raise CredentialException
     access_token = await create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -117,13 +123,20 @@ async def get_current_user(token: Annotated[str, Depends(OAUTH2_SCHEME)]) -> Use
         payload: dict = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str | None = payload.get("sub")
         if email is None:
-            raise CredentialsException
+            raise CredentialException
         token_data = TokenData(email=email)
-    except JWTError:
-        raise CredentialsException
-    user = await User.find_first(where={"email": token_data.email})
+    except jwt.ExpiredSignatureError:
+        raise TokenExpiredException
+    except jwt.InvalidTokenError:
+        raise CredentialException
+    user: UserRecord | None = await User.find_first(
+        where={"email": token_data.email},
+        include={"jwt_blacklist": True}
+    )
     if not user:
-        raise CredentialsException
+        raise CredentialException
+    elif any(filter(lambda x: x.token == token, user.jwt_blacklist)):
+        raise TokenExpiredException
     return user
 
 
@@ -134,3 +147,15 @@ def user_logged() -> type[UserResponse]:
     :return: The type of the current user that is logged in.
     """
     return Annotated[UserResponse, Depends(get_current_user)]
+
+
+async def add_access_token_blacklist(token: str, user: UserResponse) -> None:
+    """
+    Adds a JWT token to the blacklist.
+
+    Args:
+        token (str): The JWT token to add to the blacklist.
+        user (UserRecord): The user that owns the token.
+    """
+    data: JwtBlacklistCreateInput = {"token": token, "user": {"connect": {"id": user.id}}}
+    await JWTBlacklist.create(data)
